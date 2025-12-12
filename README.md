@@ -123,6 +123,8 @@ In our initial experiments (see `transformer-for-translating-english-to-gujarati
    ```
    Input: "what should we do when the day starts?"
    Output: "આપણે શું કરવું જોઈએ? શું કરવું જોઈએ? શું કરવું જોઈએ? શું કરવું જોઈએ?..."
+   Output Meaning : What should I do? What should I do? What should I do? What should I do?
+   
    ```
 
 4. **Slow Training:** More tokens per sentence = more computations per batch = slower training.
