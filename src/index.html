@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English → Gujarati NMT | From-Scratch Transformer</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* Color Palette - Saffron & Deep Teal Theme */
+:root {
+    --deep-teal: #0d4f4f;
+    --deep-teal-2: #1a6b6b;
+    --cream: #faf7f2;
+    --saffron: #ff6b35;
+    --burgundy: #7b2d26;
+    --gold: #d4a574;
+    
+    --text-primary: #0d4f4f;
+    --text-secondary: #1a6b6b;
+    --bg-primary: #faf7f2;
+    --accent-primary: #ff6b35;
+    --accent-secondary: #7b2d26;
+}
+
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+    padding-top: 60px;
+}
+
+h1, h2, h3, .section-title {
+    font-family: 'Playfair Display', Georgia, serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* Navigation Menu */
+.nav-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba(13, 79, 79, 0.97);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    border-bottom: 3px solid var(--saffron);
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.nav-link {
+    color: var(--cream);
+    text-decoration: none;
+    padding: 1rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+    letter-spacing: 0.5px;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 3px;
+    background: var(--saffron);
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--saffron);
+}
+
+.nav-link:hover::after {
+    width: 80%;
+}
+
+/* Hero Section */
+.hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, var(--burgundy) 0%, var(--deep-teal) 50%, var(--deep-teal-2) 100%);
+    color: var(--cream);
+    position: relative;
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5;
+}
+
+.hero-content {
+    z-index: 2;
+}
+
+.hero-lang {
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    color: var(--gold);
+    font-weight: 600;
+}
+
+.hero-title {
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--cream), var(--saffron));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-gujarati {
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+    color: var(--gold);
+    font-style: italic;
+}
+
+.hero-subtitle {
+    font-size: clamp(1rem, 2.5vw, 1.4rem);
+    font-weight: 300;
+    margin-bottom: 3rem;
+    opacity: 0.9;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stat-card {
+    background: rgba(250, 247, 242, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(250, 247, 242, 0.2);
+    border-radius: 16px;
+    padding: 2.5rem 1.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 180px;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--saffron);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+}
+
+.stat-number {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--saffron);
+    margin-bottom: 0.75rem;
+    line-height: 1;
+    font-family: 'Playfair Display', serif;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.scroll-indicator {
+    position: absolute;
+    bottom: 2rem;
+    text-align: center;
+    animation: bounce 2s infinite;
+}
+
+.scroll-indicator span {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+}
+
+.arrow-down {
+    font-size: 2rem;
+    color: var(--saffron);
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+/* Section Styles */
+.section {
+    padding: 5rem 0;
+}
+
+.section:nth-child(even) {
+    background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(13, 79, 79, 0.03) 100%);
+}
+
+.section-title {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    font-weight: 800;
+    margin-bottom: 2rem;
+    text-align: center;
+    color: var(--burgundy);
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--saffron), var(--burgundy));
+    border-radius: 2px;
+}
+
+.section-description {
+    font-size: 1.2rem;
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    text-align: center;
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+/* Tech Stack */
+.tech-stack {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 3rem;
+}
+
+.tech-item {
+    padding: 0.75rem 1.5rem;
+    background: var(--burgundy);
+    color: var(--cream);
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.tech-item:hover {
+    background: var(--saffron);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+}
+
+/* Dataset Section */
+.dataset-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+.dataset-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    text-align: center;
+    border-top: 4px solid var(--saffron);
+    transition: all 0.3s ease;
+}
+
+.dataset-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(255, 107, 53, 0.2);
+}
+
+.dataset-card .number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--saffron);
+    font-family: 'Playfair Display', serif;
+}
+
+.dataset-card .label {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+/* Tokenization Comparison */
+.comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+.comparison-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.comparison-card.old::before {
+    content: 'OLD';
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #dc2626;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.comparison-card.new::before {
+    content: 'NEW';
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #16a34a;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.comparison-card h3 {
+    color: var(--burgundy);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.comparison-card p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+
+.token-example {
+    background: var(--deep-teal);
+    color: var(--saffron);
+    padding: 1rem;
+    border-radius: 8px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.token-count {
+    display: inline-block;
+    background: var(--saffron);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+/* Timeline */
+.timeline {
+    max-width: 800px;
+    margin: 3rem auto;
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 40px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--saffron), var(--burgundy));
+}
+
+.timeline-item {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.timeline-marker {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--saffron), var(--burgundy));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 800;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 5px 20px rgba(255, 107, 53, 0.4);
+    z-index: 1;
+    font-family: 'Playfair Display', serif;
+}
+
+.timeline-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    flex: 1;
+    transition: all 0.3s ease;
+}
+
+.timeline-content:hover {
+    transform: translateX(10px);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+}
+
+.timeline-content h3 {
+    color: var(--burgundy);
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.timeline-content p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+
+.timeline-content code {
+    display: block;
+    background: var(--deep-teal);
+    color: var(--saffron);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    overflow-x: auto;
+}
+
+/* Architecture */
+.arch-intro {
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+.architecture-visual {
+    background: white;
+    border-radius: 16px;
+    padding: 3rem;
+    margin: 3rem 0;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    text-align: center;
+}
+
+.arch-flow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.arch-box {
+    background: linear-gradient(135deg, var(--deep-teal), var(--deep-teal-2));
+    color: var(--cream);
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    min-width: 180px;
+    box-shadow: 0 4px 15px rgba(13, 79, 79, 0.3);
+}
+
+.arch-box.encoder {
+    background: linear-gradient(135deg, var(--saffron), #ff8c5a);
+}
+
+.arch-box.decoder {
+    background: linear-gradient(135deg, var(--burgundy), #9b3d35);
+}
+
+.arch-arrow {
+    font-size: 2rem;
+    color: var(--saffron);
+    font-weight: 800;
+}
+
+/* Model Specs */
+.model-specs {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-top: 3rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+}
+
+.model-specs h3 {
+    color: var(--burgundy);
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+}
+
+.specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.spec-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border-left: 4px solid var(--saffron);
+}
+
+.spec-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.spec-value {
+    color: var(--burgundy);
+    font-weight: 500;
+}
+
+/* Results */
+.results-visual {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 3rem 0;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    text-align: center;
+}
+
+.results-visual h3 {
+    color: var(--burgundy);
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Playfair Display', serif;
+}
+
+.results-image {
+    max-width: 100%;
+    border-radius: 12px;
+    border: 2px solid var(--bg-primary);
+}
+
+/* Metrics Table */
+.metrics-table {
+    margin: 4rem 0;
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    overflow-x: auto;
+}
+
+.metrics-table h3 {
+    color: var(--burgundy);
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: var(--burgundy);
+    color: var(--cream);
+}
+
+th, td {
+    padding: 1rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(13, 79, 79, 0.1);
+}
+
+th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+tbody tr:hover {
+    background: rgba(255, 107, 53, 0.05);
+}
+
+.highlight-row {
+    background: rgba(255, 107, 53, 0.1);
+    font-weight: 600;
+}
+
+.highlight-row td {
+    color: var(--burgundy);
+}
+
+/* Translation Examples */
+.translation-examples {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+.translation-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    transition: all 0.3s ease;
+    border-left: 5px solid var(--saffron);
+}
+
+.translation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(255, 107, 53, 0.2);
+}
+
+.translation-card .english {
+    color: var(--deep-teal);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.translation-card .gujarati {
+    color: var(--burgundy);
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+
+.translation-card .quality {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.quality.perfect {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.quality.good {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+/* Learnings Grid */
+.learnings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+.learning-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    border-left: 6px solid var(--saffron);
+    transition: all 0.3s ease;
+}
+
+.learning-card:hover {
+    transform: translateX(10px);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+}
+
+.learning-card h3 {
+    color: var(--burgundy);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    font-family: 'Playfair Display', serif;
+}
+
+.learning-card p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+/* Resources */
+.resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+.resource-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.resource-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(255, 107, 53, 0.2);
+}
+
+.resource-card .icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.resource-card h3 {
+    color: var(--burgundy);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    font-family: 'Playfair Display', serif;
+}
+
+.resource-card p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--saffron), var(--burgundy));
+    color: white;
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
+}
+
+.btn-secondary {
+    background: var(--deep-teal-2);
+    color: var(--cream);
+}
+
+.btn-secondary:hover {
+    background: var(--deep-teal);
+    transform: translateY(-3px);
+}
+
+.btn-accent {
+    background: var(--burgundy);
+    color: var(--cream);
+}
+
+.btn-accent:hover {
+    background: var(--saffron);
+    transform: translateY(-3px);
+}
+
+.file-info {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    margin-top: 0.5rem;
+}
+
+/* References */
+.references-list {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(13, 79, 79, 0.1);
+}
+
+.reference-item {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(13, 79, 79, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.reference-item:last-child {
+    border-bottom: none;
+}
+
+.reference-item .title {
+    color: var(--burgundy);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.reference-item .links a {
+    color: var(--saffron);
+    text-decoration: none;
+    margin-left: 1rem;
+    font-weight: 500;
+}
+
+.reference-item .links a:hover {
+    text-decoration: underline;
+}
+
+/* Footer */
+.footer {
+    background: linear-gradient(135deg, var(--deep-teal) 0%, var(--burgundy) 100%);
+    color: var(--cream);
+    padding: 4rem 0 2rem;
+    margin-top: 5rem;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 3rem;
+}
+
+.footer-section h3 {
+    color: var(--saffron);
+    font-size: 1.4rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+}
+
+.footer-section ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem 2rem;
+    max-width: 900px;
+}
+
+.footer-section li {
+    padding: 0.5rem;
+    opacity: 0.9;
+    font-size: 0.95rem;
+    text-align: center;
+    background: rgba(250, 247, 242, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.footer-section li:hover {
+    background: rgba(255, 107, 53, 0.1);
+    transform: translateY(-2px);
+}
+
+.footer-section li a {
+    color: var(--saffron);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.footer-section li a:hover {
+    text-decoration: underline;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(250, 247, 242, 0.2);
+}
+
+.footer-bottom p {
+    margin: 0.5rem 0;
+    opacity: 0.8;
+}
+
+.creator-name {
+    font-size: 1.1rem;
+    margin-bottom: 1rem !important;
+    opacity: 1 !important;
+}
+
+.creator-name strong {
+    color: var(--saffron);
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.footer-note {
+    font-size: 0.9rem;
+    color: var(--gold);
+}
+
+/* Responsive Design */
+@media (max-width: 968px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .comparison-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-top: 100px;
+    }
+    
+    .nav-container {
+        padding: 0 1rem;
+        gap: 0.25rem;
+    }
+    
+    .nav-link {
+        padding: 0.75rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .stat-card {
+        min-height: 160px;
+        padding: 2rem 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .footer-section ul {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem 1rem;
+    }
+    
+    .footer-section li {
+        font-size: 0.85rem;
+        padding: 0.4rem;
+    }
+    
+    .timeline::before {
+        left: 20px;
+    }
+    
+    .timeline-marker {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .arch-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .arch-flow {
+        flex-direction: column;
+    }
+    
+    table {
+        font-size: 0.85rem;
+    }
+    
+    th, td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .section {
+        padding: 3rem 0;
+    }
+}
+
+/* Smooth Scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Selection Color */
+::selection {
+    background: var(--saffron);
+    color: white;
+}
+</style>
+
+</head>
+<body>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+        <div class="nav-container">
+            <a href="#mission" class="nav-link">Mission</a>
+            <a href="#dataset" class="nav-link">Dataset</a>
+            <a href="#tokenization" class="nav-link">Tokenization</a>
+            <a href="#architecture" class="nav-link">Architecture</a>
+            <a href="#training" class="nav-link">Training</a>
+            <a href="#results" class="nav-link">Results</a>
+            <a href="#learnings" class="nav-link">Learnings</a>
+            <a href="#downloads" class="nav-link">Downloads</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <p class="hero-lang">English → ગુજરાતી</p>
+                <h1 class="hero-title">Neural Machine Translation</h1>
+                <p class="hero-gujarati">"ન્યુરલ મશીન ટ્રાન્સલેશન"</p>
+                <p class="hero-subtitle">A From-Scratch Transformer Implementation trained on the Samanantar Dataset. No pre-trained weights. No shortcuts. Pure learning.</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">54M</div>
+                        <div class="stat-label">Parameters</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">285K</div>
+                        <div class="stat-label">Training Pairs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">5</div>
+                        <div class="stat-label">Epochs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">6.42</div>
+                        <div class="stat-label">BLEU Score</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <span>Scroll to explore</span>
+            <div class="arrow-down">↓</div>
+        </div>
+    </section>
+
+    <!-- Mission Section -->
+    <section id="mission" class="section">
+        <div class="container">
+            <h2 class="section-title">The Mission</h2>
+            <p class="section-description">
+                Build a complete neural machine translation system that translates English sentences into Gujarati. 
+                The entire Transformer model is built from scratch—no pre-trained weights, no transfer learning, no shortcuts. 
+                Every component (embeddings, attention mechanisms, encoder, decoder) learns directly from the bilingual data.
+            </p>
+            <div class="tech-stack">
+                <div class="tech-item">PyTorch</div>
+                <div class="tech-item">Transformer</div>
+                <div class="tech-item">BPE Tokenization</div>
+                <div class="tech-item">Samanantar Dataset</div>
+                <div class="tech-item">Kaggle P100 GPU</div>
+                <div class="tech-item">SentencePiece</div>
+                <div class="tech-item">HuggingFace</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dataset Section -->
+    <section id="dataset" class="section">
+        <div class="container">
+            <h2 class="section-title">The Samanantar Dataset</h2>
+            <p class="section-description">
+                The largest publicly available parallel corpus for Indian languages, developed by AI4Bharat. 
+                It contains over 49 million sentence pairs across 11 Indian languages paired with English.
+            </p>
+            
+            <div class="dataset-stats">
+                <div class="dataset-card">
+                    <div class="number">3M+</div>
+                    <div class="label">English-Gujarati Pairs Available</div>
+                </div>
+                <div class="dataset-card">
+                    <div class="number">285,000</div>
+                    <div class="label">Training Samples Used</div>
+                </div>
+                <div class="dataset-card">
+                    <div class="number">15,000</div>
+                    <div class="label">Validation Samples</div>
+                </div>
+                <div class="dataset-card">
+                    <div class="number">95/5</div>
+                    <div class="label">Train/Val Split</div>
+                </div>
+            </div>
+
+            <div class="learnings-grid" style="margin-top: 3rem;">
+                <div class="learning-card">
+                    <h3>📊 Scale</h3>
+                    <p>3 million+ pairs gives the model enough examples to learn translation patterns between English and Gujarati.</p>
+                </div>
+                <div class="learning-card">
+                    <h3>✨ Quality</h3>
+                    <p>Human-translated pairs mean the model learns correct grammar and natural phrasing—not machine-generated noise.</p>
+                </div>
+                <div class="learning-card">
+                    <h3>🌍 Diversity</h3>
+                    <p>Covers government documents, news, literature—so the model learns general translation, not just one domain.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tokenization Section -->
+    <section id="tokenization" class="section">
+        <div class="container">
+            <h2 class="section-title">Evolution of Tokenization</h2>
+            <p class="section-description">
+                How we went from character-level tokenization (that caused repetition loops) to BPE subword tokenization that actually works.
+            </p>
+
+            <div class="comparison-grid">
+                <div class="comparison-card old">
+                    <h3>Character-Level Tokenization</h3>
+                    <p>Every single character was treated as a separate token. This caused major problems:</p>
+                    <ul style="color: var(--text-secondary); margin: 1rem 0; padding-left: 1.5rem;">
+                        <li>Very long sequences (11 tokens for "translation")</li>
+                        <li>No word-level understanding</li>
+                        <li>Repetition loops in output</li>
+                        <li>Slow training</li>
+                    </ul>
+                    <div class="token-example">
+                        "translation" → ['t', 'r', 'a', 'n', 's', 'l', 'a', 't', 'i', 'o', 'n']
+                        <span class="token-count">11 tokens</span>
+                    </div>
+                </div>
+                <div class="comparison-card new">
+                    <h3>BPE (Byte Pair Encoding)</h3>
+                    <p>Subword tokenization finds common character combinations and treats them as single tokens:</p>
+                    <ul style="color: var(--text-secondary); margin: 1rem 0; padding-left: 1.5rem;">
+                        <li>Shorter sequences = faster training</li>
+                        <li>Handles rare words gracefully</li>
+                        <li>Language-agnostic</li>
+                        <li>Discovers meaningful morphemes</li>
+                    </ul>
+                    <div class="token-example">
+                        "translation" → ['trans', 'lation']
+                        <span class="token-count" style="background: #16a34a;">2-3 tokens</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-specs" style="margin-top: 3rem;">
+                <h3>BPE Configuration</h3>
+                <div class="specs-grid">
+                    <div class="spec-item">
+                        <span class="spec-label">Vocabulary Size</span>
+                        <span class="spec-value">16,000 tokens</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Model Type</span>
+                        <span class="spec-value">Byte Pair Encoding</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Character Coverage</span>
+                        <span class="spec-value">100%</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Training Samples</span>
+                        <span class="spec-value">100,000 sentences</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">PAD Token ID</span>
+                        <span class="spec-value">0</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">BOS Token ID</span>
+                        <span class="spec-value">2</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="section">
+        <div class="container">
+            <h2 class="section-title">Transformer Architecture</h2>
+            <p class="arch-intro">
+                The Transformer architecture (Vaswani et al., 2017 - "Attention Is All You Need") uses attention mechanisms 
+                that let every word look at every other word simultaneously. This means parallel processing, 
+                better handling of long-range dependencies, and state-of-the-art translation quality.
+            </p>
+
+            <div class="architecture-visual">
+                <h3 style="color: var(--burgundy); font-family: 'Playfair Display', serif; margin-bottom: 1.5rem;">Encoder-Decoder Flow</h3>
+                <div class="arch-flow">
+                    <div class="arch-box">English Input</div>
+                    <div class="arch-arrow">→</div>
+                    <div class="arch-box encoder">Encoder<br><small>(4 Layers)</small></div>
+                    <div class="arch-arrow">→</div>
+                    <div class="arch-box">Context</div>
+                    <div class="arch-arrow">→</div>
+                    <div class="arch-box decoder">Decoder<br><small>(4 Layers)</small></div>
+                    <div class="arch-arrow">→</div>
+                    <div class="arch-box">ગુજરાતી Output</div>
+                </div>
+            </div>
+
+            <div class="model-specs">
+                <h3>Model Hyperparameters</h3>
+                <div class="specs-grid">
+                    <div class="spec-item">
+                        <span class="spec-label">d_model</span>
+                        <span class="spec-value">512</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Attention Heads</span>
+                        <span class="spec-value">8</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Feed-Forward Size</span>
+                        <span class="spec-value">2048</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Encoder Layers</span>
+                        <span class="spec-value">4</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Decoder Layers</span>
+                        <span class="spec-value">4</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Dropout</span>
+                        <span class="spec-value">0.1</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Max Sequence Length</span>
+                        <span class="spec-value">128 tokens</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Total Parameters</span>
+                        <span class="spec-value">54,017,664 (~54M)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Training Section -->
+    <section id="training" class="section">
+        <div class="container">
+            <h2 class="section-title">Training Journey</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker">1</div>
+                    <div class="timeline-content">
+                        <h3>BPE Tokenizer Training</h3>
+                        <p>Trained BPE tokenizers locally on MacBook M2 using SentencePiece. 
+                        One-time process that saves GPU hours on Kaggle.</p>
+                        <code>python local_bpe_training.py</code>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">2</div>
+                    <div class="timeline-content">
+                        <h3>Data Preparation</h3>
+                        <p>Filtered 3M+ pairs down to 300K high-quality samples under 200 characters. 
+                        Split into 285K training and 15K validation.</p>
+                        <code>95% train / 5% validation split</code>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">3</div>
+                    <div class="timeline-content">
+                        <h3>Training Launch</h3>
+                        <p>Trained on Kaggle with NVIDIA Tesla P100 (16GB VRAM). 
+                        ~2.5 hours per epoch, ~12.5 hours total for 5 epochs.</p>
+                        <code>GPU: Tesla P100 | Batch: 64 | LR: 3e-4</code>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">4</div>
+                    <div class="timeline-content">
+                        <h3>Model Saved!</h3>
+                        <p>5 epochs completed! Model produces recognizable translations. 
+                        Deployed to HuggingFace Spaces for live demo. 🎉</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-specs" style="margin-top: 3rem;">
+                <h3>Training Configuration</h3>
+                <div class="specs-grid">
+                    <div class="spec-item">
+                        <span class="spec-label">Optimizer</span>
+                        <span class="spec-value">AdamW</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Learning Rate</span>
+                        <span class="spec-value">3e-4</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Warmup Steps</span>
+                        <span class="spec-value">500</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Batch Size</span>
+                        <span class="spec-value">64</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Weight Decay</span>
+                        <span class="spec-value">0.01</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Label Smoothing</span>
+                        <span class="spec-value">0.1</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Gradient Clipping</span>
+                        <span class="spec-value">1.0</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Betas</span>
+                        <span class="spec-value">(0.9, 0.98)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results" class="section">
+        <div class="container">
+            <h2 class="section-title">Training Results</h2>
+
+            <div class="results-visual">
+                <h3>Loss & Perplexity Curves</h3>
+                <img src="curves.png" alt="Training Curves - Loss and Perplexity" class="results-image">
+                <p style="color: var(--text-secondary); margin-top: 1rem;">
+                    Both training and validation loss decrease together—the model is learning, not memorizing!
+                </p>
+            </div>
+
+            <div class="metrics-table">
+                <h3>Epoch-by-Epoch Progress</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Epoch</th>
+                            <th>Train Loss</th>
+                            <th>Val Loss</th>
+                            <th>Train Perplexity</th>
+                            <th>Val Perplexity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>6.30</td>
+                            <td>5.64</td>
+                            <td>~544</td>
+                            <td>~280</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>5.45</td>
+                            <td>5.26</td>
+                            <td>~233</td>
+                            <td>~192</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>5.17</td>
+                            <td>5.07</td>
+                            <td>~176</td>
+                            <td>~159</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>5.00</td>
+                            <td>4.98</td>
+                            <td>~148</td>
+                            <td>~145</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td>5</td>
+                            <td><strong>4.87</strong></td>
+                            <td><strong>4.88</strong></td>
+                            <td><strong>~130</strong></td>
+                            <td><strong>~132</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 style="text-align: center; color: var(--burgundy); font-family: 'Playfair Display', serif; margin: 3rem 0 2rem;">Sample Translations</h3>
+            
+            <div class="translation-examples">
+                <div class="translation-card">
+                    <div class="english">"India is a great country."</div>
+                    <div class="gujarati">ભારત એક મહાન દેશ છે.</div>
+                    <span class="quality perfect">✓ Perfect</span>
+                </div>
+                <div class="translation-card">
+                    <div class="english">"What is your name?"</div>
+                    <div class="gujarati">નામ શું છે?</div>
+                    <span class="quality good">~90% (missing "your")</span>
+                </div>
+                <div class="translation-card">
+                    <div class="english">"Education is important."</div>
+                    <div class="gujarati">શિક્ષણનું મહત્ત્વ.</div>
+                    <span class="quality good">~85% (correct meaning)</span>
+                </div>
+                <div class="translation-card">
+                    <div class="english">"Thank you very much."</div>
+                    <div class="gujarati">હું ખૂબ જ ખૂબ જ આભારી છું.</div>
+                    <span class="quality good">~80% (verbose but correct)</span>
+                </div>
+            </div>
+
+            <div class="dataset-stats" style="margin-top: 3rem;">
+                <div class="dataset-card">
+                    <div class="number">6.42</div>
+                    <div class="label">BLEU Score</div>
+                </div>
+                <div class="dataset-card">
+                    <div class="number">1.92</div>
+                    <div class="label">ROUGE-1</div>
+                </div>
+                <div class="dataset-card">
+                    <div class="number">1.92</div>
+                    <div class="label">ROUGE-L</div>
+                </div>
+                <div class="dataset-card">
+                    <div class="number">~132</div>
+                    <div class="label">Final Perplexity</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Learnings Section -->
+    <section id="learnings" class="section">
+        <div class="container">
+            <h2 class="section-title">Key Learnings</h2>
+            <div class="learnings-grid">
+                <div class="learning-card">
+                    <h3>🔤 Tokenization Matters</h3>
+                    <p>BPE tokenization solved the repetition loops that plagued character-level models. 
+                    Subword units give the model meaningful building blocks to work with.</p>
+                </div>
+                <div class="learning-card">
+                    <h3>📐 Architecture Depth</h3>
+                    <p>4 encoder + 4 decoder layers provide enough depth to learn translation patterns 
+                    that 1 layer couldn't. But not so deep that we overfit on 285K samples.</p>
+                </div>
+                <div class="learning-card">
+                    <h3>⚙️ Hyperparameter Tuning</h3>
+                    <p>Label smoothing, warmup, and AdamW all contribute to stable, efficient learning. 
+                    The original Transformer paper's recommendations still work well.</p>
+                </div>
+                <div class="learning-card">
+                    <h3>📊 Quality Data</h3>
+                    <p>Samanantar's human translations teach correct patterns from the start. 
+                    Garbage in = garbage out. Quality parallel data is essential.</p>
+                </div>
+                <div class="learning-card">
+                    <h3>💻 Compute Strategy</h3>
+                    <p>Train BPE locally (CPU-sufficient), save GPU hours for model training. 
+                    Kaggle's free P100 is enough for a 54M parameter model.</p>
+                </div>
+                <div class="learning-card">
+                    <h3>📈 Room to Grow</h3>
+                    <p>Curves still decreasing at epoch 5 means more training would help. 
+                    Extended training to 20+ epochs could push BLEU to 15-18.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Downloads Section -->
+    <section id="downloads" class="section">
+        <div class="container">
+            <h2 class="section-title">Resources & Downloads</h2>
+            
+            <div class="resources-grid">
+                <div class="resource-card">
+                    <div class="icon">🤗</div>
+                    <h3>Live Demo</h3>
+                    <p>Try the model on your own English sentences!</p>
+                    <a href="https://huggingface.co/spaces/RL00/english-gujarati-translator" 
+                       class="btn btn-primary" target="_blank">Open Demo →</a>
+                    <p class="file-info">Interactive inference • Upload & predict</p>
+                </div>
+                <div class="resource-card">
+                    <div class="icon">📓</div>
+                    <h3>Training Notebook</h3>
+                    <p>Complete Kaggle notebook with all training code</p>
+                    <a href="https://www.kaggle.com/code/wsijdicudhincjfc/training-en-gu" 
+                       class="btn btn-secondary" target="_blank">View Notebook</a>
+                    <p class="file-info">Kaggle • Full training pipeline</p>
+                </div>
+                <div class="resource-card">
+                    <div class="icon">📚</div>
+                    <h3>Samanantar Dataset</h3>
+                    <p>The parallel corpus used for training</p>
+                    <a href="https://huggingface.co/datasets/ai4bharat/samanantar" 
+                       class="btn btn-accent" target="_blank">HuggingFace</a>
+                    <a href="https://www.kaggle.com/datasets/mathurinache/samanantar/data" 
+                       class="btn btn-accent" target="_blank">Kaggle</a>
+                </div>
+            </div>
+
+            <div class="references-list" style="margin-top: 3rem;">
+                <h3 style="color: var(--burgundy); font-family: 'Playfair Display', serif; margin-bottom: 1.5rem; text-align: center;">References</h3>
+                <div class="reference-item">
+                    <span class="title">"Attention Is All You Need" (Vaswani et al., 2017)</span>
+                    <span class="links">
+                        <a href="https://arxiv.org/abs/1706.03762" target="_blank">arXiv</a>
+                        <a href="https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf" target="_blank">PDF</a>
+                    </span>
+                </div>
+                <div class="reference-item">
+                    <span class="title">"Samanantar: Parallel Corpora for 11 Indic Languages" (Ramesh et al., 2022)</span>
+                    <span class="links">
+                        <a href="https://aclanthology.org/2022.tacl-1.52/" target="_blank">ACL Anthology</a>
+                    </span>
+                </div>
+                <div class="reference-item">
+                    <span class="title">"Neural Machine Translation of Rare Words with Subword Units" (Sennrich et al., 2016)</span>
+                    <span class="links">
+                        <a href="https://aclanthology.org/P16-1162/" target="_blank">ACL Anthology</a>
+                        <a href="https://aclanthology.org/P16-1162.pdf" target="_blank">PDF</a>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Acknowledgments</h3>
+                    <ul>
+                        <li><a href="https://huggingface.co/datasets/ai4bharat/samanantar" target="_blank">Samanantar Dataset</a></li>
+                        <li>AI4Bharat</li>
+                        <li>HuggingFace</li>
+                        <li>PyTorch Team</li>
+                        <li>Kaggle</li>
+                        <li>SentencePiece</li>
+                        <li>Late Nights</li>
+                        <li>Stack Overflow</li>
+                        <li>Chai ☕</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="creator-name">Created by <strong>Rishit Laddha (2309575)</strong></p>
+                <p>Built with 💙 and lots of GPU power | NLP Project 2025</p>
+                <p class="footer-note">Trained from scratch • No pre-trained weights • Pure Transformer magic</p>
+            </div>
+        </div>
+    </footer>
+    
+
+<script>
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+
+// Intersection Observer for fade-in animations
+const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -100px 0px'
+};
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+        }
+    });
+}, observerOptions);
+
+// Observe all major sections
+document.addEventListener('DOMContentLoaded', () => {
+    // Add initial animation states
+    const animatedElements = document.querySelectorAll('.stat-card, .timeline-item, .dataset-card, .comparison-card, .learning-card, .resource-card, .translation-card');
+    
+    animatedElements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = `all 0.6s ease ${index * 0.1}s`;
+        observer.observe(el);
+    });
+});
+
+// Add parallax effect to hero
+window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset;
+    const hero = document.querySelector('.hero');
+    if (hero) {
+        hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+        hero.style.opacity = 1 - (scrolled / 700);
+    }
+});
+
+// Counter animation for stats
+const statsObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting && !entry.target.classList.contains('counted')) {
+            entry.target.classList.add('counted');
+            const statNumber = entry.target.querySelector('.stat-number');
+            if (statNumber) {
+                const text = statNumber.textContent;
+                const match = text.match(/[\d.]+/);
+                if (match) {
+                    const targetNum = parseFloat(match[0]);
+                    let currentNum = 0;
+                    const duration = 2000;
+                    const increment = targetNum / (duration / 16);
+                    
+                    const timer = setInterval(() => {
+                        currentNum += increment;
+                        if (currentNum >= targetNum) {
+                            statNumber.textContent = text;
+                            clearInterval(timer);
+                        } else {
+                            if (text.includes('.')) {
+                                statNumber.textContent = currentNum.toFixed(2) + text.replace(/[\d.]+/, '');
+                            } else if (text.includes('K')) {
+                                statNumber.textContent = Math.floor(currentNum) + 'K';
+                            } else if (text.includes('M')) {
+                                statNumber.textContent = Math.floor(currentNum) + 'M';
+                            } else {
+                                statNumber.textContent = Math.floor(currentNum) + text.replace(/\d+/, '');
+                            }
+                        }
+                    }, 16);
+                }
+            }
+        }
+    });
+}, { threshold: 0.5 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.stat-card').forEach(card => {
+        statsObserver.observe(card);
+    });
+});
+
+// Add hover effect for images
+document.querySelectorAll('.results-image').forEach(img => {
+    img.addEventListener('mouseenter', function() {
+        this.style.transform = 'scale(1.02)';
+        this.style.transition = 'transform 0.3s ease';
+    });
+    
+    img.addEventListener('mouseleave', function() {
+        this.style.transform = 'scale(1)';
+    });
+});
+
+// Console Easter Egg
+console.log('%c🇮🇳 English → ગુજરાતી NMT Project', 'color: #ff6b35; font-size: 24px; font-weight: bold;');
+console.log('%c54M Parameters | 285K Training Pairs | BLEU 6.42', 'color: #7b2d26; font-size: 16px;');
+console.log('%cTrained on Kaggle P100 for ~12.5 hours', 'color: #1a6b6b; font-size: 14px;');
+console.log('%cBuilt with 💙 and lots of GPU power', 'color: #0d4f4f; font-size: 12px;');
+</script>
+
+</body>
+</html>
+
