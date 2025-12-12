@@ -307,7 +307,7 @@ In vanilla Adam, weight decay is applied incorrectly (it's added to the gradient
 
 ### Loss Curves (Left Plot)
 
-![Training Curves](curves.png)
+![Training Curves](src/curves.png)
 
 **What is Loss?**
 Loss measures how wrong the model's predictions are. Lower loss = better predictions. We use Cross-Entropy Loss, which measures the difference between predicted probability distribution and actual next token.
@@ -600,13 +600,13 @@ We deployed a complete serverless website using AWS services:
 
 **S3 Bucket for Static Assets:**
 
-![S3 Bucket](s3_bucket.png)
+![S3 Bucket](src/s3_bucket.png)
 
 The S3 bucket stores the training curves image and other static assets. It's configured for public read access and costs less than $0.01/month.
 
 **Lambda Function for Website:**
 
-![Lambda Deployed](lambda_deployed.png)
+![Lambda Deployed](src/lambda_deployed.png)
 
 AWS Lambda hosts the entire project website serverlessly. No servers to manage, auto-scales with traffic, and the first 1 million requests per month are free!
 
@@ -616,7 +616,7 @@ AWS Lambda hosts the entire project website serverlessly. No servers to manage, 
 
 The trained model is deployed on HuggingFace Spaces with a Gradio interface:
 
-![HuggingFace Demo](hugging_face_deployed.png)
+![HuggingFace Demo](src/hugging_face_deployed.png)
 
 **How it works:**
 1. User enters an English sentence in the text box
